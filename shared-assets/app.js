@@ -1,0 +1,21 @@
+/* ونوس شاپ | Copyright © 2026 | برنامه‌نویس: رضا علی یان */
+
+const STORE = window.STORE_CONFIG;
+const KEY = k => `${STORE.id}:${k}`;
+const money = n => new Intl.NumberFormat('fa-IR').format(n) + ' تومان';
+const get = (k, fallback=[]) => { try{return JSON.parse(localStorage.getItem(KEY(k))) ?? fallback}catch{return fallback} };
+const set = (k,v) => localStorage.setItem(KEY(k), JSON.stringify(v));
+const toast = msg => { const w=document.querySelector('.toast-wrap')||(()=>{const x=document.createElement('div');x.className='toast-wrap';document.body.append(x);return x})(); const t=document.createElement('div');t.className='toast';t.textContent=msg;w.append(t);setTimeout(()=>t.remove(),2600); };
+const cart=()=>get('cart',[]), wish=()=>get('wishlist',[]), compare=()=>get('compare',[]);
+function productById(id){return STORE.products.find(p=>p.id===Number(id))}
+function cartCount(){return cart().reduce((a,x)=>a+x.qty,0)}
+function refreshCounts(){document.querySelectorAll('[data-cart-count]').forEach(x=>x.textContent=cartCount()||'');document.querySelectorAll('[data-wish-count]').forEach(x=>x.textContent=wish().length||'');document.querySelectorAll('[data-compare-count]').forEach(x=>x.textContent=compare().length||'')}
+function addCart(id,qty=1){const c=cart();const item=c.find(x=>x.id===Number(id));item?item.qty+=qty:c.push({id:Number(id),qty});set('cart',c);set('recent', [Number(id),...get('recent',[])].filter((v,i,a)=>a.indexOf(v)===i).slice(0,8));toast('محصول به سبد خرید اضافه شد ✓');refreshCounts()}
+function toggleWish(id){let w=wish();w=w.includes(Number(id))?w.filter(x=>x!==Number(id)):[Number(id),...w];set('wishlist',w);toast(w.includes(Number(id))?'به علاقه‌مندی‌ها اضافه شد ♥':'از علاقه‌مندی‌ها حذف شد');refreshCounts()}
+function toggleCompare(id){let c=compare();if(c.includes(Number(id)))c=c.filter(x=>x!==Number(id));else if(c.length<4)c.push(Number(id));else return toast('حداکثر ۴ محصول قابل مقایسه است');set('compare',c);toast('مقایسه به‌روزرسانی شد');refreshCounts()}
+function card(p,variant=0){return `<article class="product-card reveal"><div class="product-media"><div class="badges">${p.discount?`<span class="badge">${p.discount}٪ تخفیف</span>`:''}<span class="badge" style="background:#fff;color:var(--accent);border:1px solid var(--line)">${p.stock<5?'موجودی محدود':'موجود'}</span></div><div class="card-actions"><button class="circle" aria-label="علاقه‌مندی" onclick="toggleWish(${p.id})">♡</button><button class="circle" aria-label="مقایسه" onclick="toggleCompare(${p.id})">⇄</button></div><a href="product.html?id=${p.id}"><img loading="lazy" src="${p.images[0]}" alt="${p.name}"></a></div><div class="product-info"><div class="brand">${p.brand}</div><a class="product-name" href="product.html?id=${p.id}">${p.name}</a><div class="rating">★★★★★ <span class="muted">${p.rating} (${p.reviews})</span></div><div class="price-row"><div><span class="price">${money(p.finalPrice)}</span>${p.discount?` <span class="old">${money(p.price)}</span>`:''}</div></div><button class="btn primary add" onclick="addCart(${p.id})">افزودن به سبد</button></div></article>`}
+function renderCards(list,el){if(!el)return;el.innerHTML=list.map(card).join('');observe();refreshCounts()}
+function observe(){const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')}),{threshold:.08});document.querySelectorAll('.reveal').forEach(x=>io.observe(x))}
+function initSearch(){const input=document.querySelector('[data-search]');const box=document.querySelector('[data-suggestions]');if(!input)return;input.addEventListener('input',()=>{const q=input.value.trim();if(!box)return;if(!q){box.innerHTML='';box.hidden=true;return}const hits=STORE.products.filter(p=>(p.name+p.brand+p.category).includes(q)).slice(0,5);box.innerHTML=hits.map(p=>`<a href="product.html?id=${p.id}">${p.name}<small>${p.brand}</small></a>`).join('')||'<span>نتیجه‌ای پیدا نشد</span>';box.hidden=false})}
+function wireCommon(){initSearch();refreshCounts();observe();document.querySelectorAll('[data-menu]').forEach(b=>b.addEventListener('click',()=>document.querySelector('.mobile-menu')?.classList.toggle('open')))}
+document.addEventListener('DOMContentLoaded',wireCommon);
